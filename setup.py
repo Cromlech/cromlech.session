@@ -8,6 +8,8 @@ version = '0.1'
 
 install_requires = [
     'setuptools',
+    'biscuits',
+    'itsdangerous',
     ]
 
 tests_require = [
@@ -21,16 +23,16 @@ transaction_requires = [
 
 setup(name='cromlech.session',
       version=version,
-      description="Cromlech server-side session components.",
+      description="Server-side session components for WSGI or Non-WSGI apps.",
       long_description=open("README.txt").read() + "\n" +
                        open(os.path.join("docs", "HISTORY.txt")).read(),
       classifiers=[
         "Programming Language :: Python",
         ],
       keywords='Cromlech',
-      author='The Dolmen team',
+      author='The Cromlech team',
       author_email='dolmen@list.dolmen-project.org',
-      url='http://gitweb.dolmen-project.org/',
+      url='https://github.com/Cromlech',
       license='ZPL',
       packages=find_packages('src', exclude=['ez_setup']),
       package_dir={'': 'src'},
