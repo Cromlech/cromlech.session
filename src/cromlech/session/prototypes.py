@@ -39,7 +39,7 @@ class Session(object):
     Persistence should be handled and called exclusively
     in and through this abstraction.
     """
-    def __init__(self, new, sid, handler):
+    def __init__(self, sid, handler, new=False):
         self.sid = sid
         self.handler = handler
         self.new = new  # boolean : this is a new session.
