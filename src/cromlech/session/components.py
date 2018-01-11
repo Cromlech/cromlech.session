@@ -1,11 +1,11 @@
 # -*- coding: utf-8 -*-
 
+from .prototypes import Session
 from biscuits import parse, Cookie
 from datetime import datetime, timedelta
 from functools import wraps
 from itsdangerous import TimestampSigner
 from uuid import uuid4
-from .prototypes import Session
 
 
 class SignedCookieManager(object):
@@ -24,9 +24,13 @@ class SignedCookieManager(object):
     def refresh_id(self, sid):
         return str(self.signer.sign(sid), 'utf-8')
 
-    def verify_id(self, sid):
+    def verify_id(self, ssid):
         # maybe we want an error handling here.
-        return self.signer.unsign(signed_sid, max_age=self.delta)
+        return self.signer.unsign(ssid, max_age=self.delta)
+
+    def session(self, cookie):
+        new, sid = self.get_id(cookie)
+        return self.session_dict(sid, self.handler, new=new)
     
     def get_id(self, cookie):
         if cookie is not None:
@@ -35,23 +39,29 @@ class SignedCookieManager(object):
             if signed_sid is not None:
                 sid = self.verify_id(signed_sid)
                 return False, str(sid, 'utf-8')
-        return True, self.generate_session_id()
+        return True, self.generate_id()
 
-    def cookie(self, sid, expire, path="/", domain="localhost"):
+    def cookie(self, sid, path="/", domain="localhost"):
         """We enforce the expiration.
         """
         # Refresh the signature on the sid.
         ssid = self.refresh_id(sid)
 
+        # Generate the expiration date using the delta
+        expires = datetime.now() + timedelta(seconds=self.delta)
+        
         # Create the cookie containing the ssid.
         cookie = Cookie(
             name=self.cookie_name, value=ssid, path=path,
-            domain=domain, expires=expire)
-        return str(cookie)
+            domain=domain, expires=expires)
+    
+        value = str(cookie)
 
-    def session(self, cookie):
-        new, sid = self.get_id(cookie)
-        return self.session_dict(sid, new, self.handler)
+        # Check value
+        if len(value) > 4093:  # 4096 - 3 bytes of overhead
+            raise ValueError('The Cookie is over 4093 bytes.')
+
+        return value
 
 
 class WSGISessionManager(object):
@@ -72,12 +82,12 @@ class WSGISessionManager(object):
                 session_dict = environ[self.environ_key]
                 session_dict.persist()
 
-                # Prepare the cookie and push it in the headers
+                # Prepare the cookie
                 path = environ['SCRIPT_NAME'] or '/'
                 domain = environ['HTTP_HOST'].split(':', 1)[0]
-                expire = datetime.now() + timedelta(seconds=self.delta)
-                cookie = self.manager.cookie(
-                    session_dict.sid, expire, path, domain)
+                cookie = self.manager.cookie(session_dict.sid, path, domain)
+
+                # Write the cookie header
                 headers.append(('Set-Cookie', cookie))
 
                 # Return normally
