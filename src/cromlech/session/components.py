@@ -12,9 +12,9 @@ class SignedCookieManager(object):
 
     session = Session
     
-    def __init__(self, secret, handler, cookie='sid'):
-        self.handler = handler
-        self.delta = handler.delta  # lifespan delta in seconds.
+    def __init__(self, secret, store, cookie='sid'):
+        self.store = store
+        self.delta = store.delta  # lifespan delta in seconds.
         self.cookie_name = cookie
         self.signer = TimestampSigner(secret)
 
@@ -28,10 +28,10 @@ class SignedCookieManager(object):
         # maybe we want an error handling here.
         return self.signer.unsign(ssid, max_age=self.delta)
 
-    def session(self, cookie):
+    def get_session(self, cookie):
         new, sid = self.get_id(cookie)
-        return self.session_dict(sid, self.handler, new=new)
-    
+        return self.session(sid, self.store, new=new)
+
     def get_id(self, cookie):
         if cookie is not None:
             morsels = parse(cookie)
@@ -79,13 +79,13 @@ class WSGISessionManager(object):
 
                 # Write down the session
                 # This relies on the good use of the `save` method.
-                session_dict = environ[self.environ_key]
-                session_dict.persist()
+                session = environ[self.environ_key]
+                session.persist()
 
                 # Prepare the cookie
                 path = environ['SCRIPT_NAME'] or '/'
                 domain = environ['HTTP_HOST'].split(':', 1)[0]
-                cookie = self.manager.cookie(session_dict.sid, path, domain)
+                cookie = self.manager.cookie(session.sid, path, domain)
 
                 # Write the cookie header
                 headers.append(('Set-Cookie', cookie))
@@ -93,8 +93,8 @@ class WSGISessionManager(object):
                 # Return normally
                 return start_response(status, headers, exc_info)
 
-            session_dict = self.manager.session(environ.get('HTTP_COOKIE'))
-            environ[self.environ_key] = session_dict
+            session = self.manager.get_session(environ.get('HTTP_COOKIE'))
+            environ[self.environ_key] = session
             return app(environ, session_start_response)
 
         return session_wrapper
