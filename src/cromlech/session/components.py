@@ -5,12 +5,12 @@ from datetime import datetime, timedelta
 from functools import wraps
 from itsdangerous import TimestampSigner
 from uuid import uuid4
-from .prototypes import SessionDict
+from .prototypes import Session
 
 
 class SignedCookieManager(object):
 
-    session_dict = SessionDict
+    session = Session
     
     def __init__(self, secret, handler, cookie='sid'):
         self.handler = handler

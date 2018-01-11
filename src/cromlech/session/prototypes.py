@@ -1,25 +1,13 @@
 # -*- coding: utf-8 -*-
 
-class SessionHandler(object):
-    """ HTTP session handler skeleton.
-    """
-    def __iter__(self):
-        """Iterates the session ids if that makes sense in the context
-        of the session management.
-        """
-        return iter(())
+from abc import ABCMeta, abstractmethod
 
+
+class Store(metaclass=ABCMeta):
+    """Session store abstraction.
+    """
     def new(self):
         return {}
-
-    def get(self, sid):
-        raise NotImplementedError
-
-    def set(self, sid, session):
-        raise NotImplementedError
-
-    def clear(self, sid):
-        raise NotImplementedError
 
     def touch(self, sid):
         """This method is similar to the `touch` unix command.
@@ -29,61 +17,89 @@ class SessionHandler(object):
         pass
 
     def flush_expired_sessions(self):
+        """This method removes all the expired sessions.
+        Implement if that makes sense in your store context.
+        This method should be called as part of a scheduling,
+        since it can be very costy.
+        """
+        raise NotImplementedError
+    
+    @abstractmethod
+    def __iter__(self):
+        """Iterates the session ids if that makes sense in the context
+        of the session management.
+        """
+        return iter(())
+
+    @abstractmethod
+    def get(self, sid):
         raise NotImplementedError
 
+    @abstractmethod
+    def set(self, sid, session):
+        raise NotImplementedError
 
-class Session(object):
+    @abstractmethod
+    def clear(self, sid):
+        raise NotImplementedError
+
+    @abstractmethod
+    def delete(self, sid):
+        raise NotImplementedError
+    
+
+class Session(metaclass=ABCMeta):
     """ HTTP session dict prototype.
     This is an abstraction on top of a simple dict.
     It has flags to track modifications and access.
     Persistence should be handled and called exclusively
     in and through this abstraction.
     """
-    def __init__(self, new, sid, handler):
+    def __init__(self, sid, store, new=False):
         self.sid = sid
-        self.handler = handler
+        self.store = store
         self.new = new  # boolean : this is a new session.
         self._modified = new or False
-        self._session = None  # Lazy loading
+        self._data = None  # Lazy loading
 
     def __getitem__(self, key):
-        return self.session[key]
+        return self.data[key]
 
     def __setitem__(self, key, value):
-        self.session[key] = value
+        self.data[key] = value
         self._modified = True
 
     def __delitem__(self, key):
-        self.session.__delitem__(key)
+        self.data.__delitem__(key)
         self._modified = True
 
     def __repr__(self):
-        return self.session.__repr__()
+        return self.data.__repr__()
 
     def __iter__(self):
-        return iter(self.session)
+        return iter(self.data)
 
     def __contains__(self, key):
-        return key in self.session
+        return key in self.data
 
     def has_key(self, key):
-        return key in self.session
+        return key in self.data
 
     def get(self, key, default=None):
-        return self.session.get(key, default)
+        return self.data.get(key, default)
 
     @property
-    def session(self):
-        if self._session is None:
+    def data(self):
+        if self._data is None:
             if self.new:
-                self._session = self.handler.new()
+                self._data = self.store.new()
             else:
-                self._session = self.handler.get(self.sid)
-        return self._session
+                self._data = self.store.get(self.sid)
+        return self._data
 
     @property
     def accessed(self):
-        return self._session is not None
+        return self._data is not None
 
     @property
     def modified(self):
@@ -100,8 +116,8 @@ class Session(object):
 
     def persist(self, force=False):
         if force or (not force and self._modified):
-            self.handler.set(self.sid, self.session)
+            self.store.set(self.sid, self.data)
             self._modified = False
         elif self.accessed:
             # We are alive, please keep us that way.
-            self.handler.touch(self.sid)
+            self.store.touch(self.sid)
