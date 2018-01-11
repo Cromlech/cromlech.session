@@ -11,7 +11,7 @@ cache:
   pip: true
 
 before_install:
-  - bin/pip install --upgrade pip setuptools zc.buildout
+  - pip install --upgrade pip setuptools zc.buildout
 
 install:
   - pip --version
