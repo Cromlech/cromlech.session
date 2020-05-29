@@ -1,17 +1,17 @@
-# -*- coding: utf-8 -*-
-
-from .prototypes import Session
-from biscuits import parse, Cookie
 from datetime import datetime, timedelta
 from functools import wraps
-from itsdangerous import TimestampSigner
 from uuid import uuid4
+from biscuits import parse, Cookie
+from itsdangerous import TimestampSigner
+import itsdangerous.exc
+
+from .prototypes import Session
 
 
 class SignedCookieManager(object):
 
     session = Session
-    
+
     def __init__(self, secret, store, cookie='sid'):
         self.store = store
         self.delta = store.delta  # lifespan delta in seconds.
@@ -25,7 +25,6 @@ class SignedCookieManager(object):
         return str(self.signer.sign(sid), 'utf-8')
 
     def verify_id(self, ssid):
-        # maybe we want an error handling here.
         return self.signer.unsign(ssid, max_age=self.delta)
 
     def get_session(self, cookie):
@@ -37,8 +36,12 @@ class SignedCookieManager(object):
             morsels = parse(cookie)
             signed_sid = morsels.get(self.cookie_name)
             if signed_sid is not None:
-                sid = self.verify_id(signed_sid)
-                return False, str(sid, 'utf-8')
+                try:
+                    sid = self.verify_id(signed_sid)
+                    return False, str(sid, 'utf-8')
+                except itsdangerous.exc.SignatureExpired:
+                    # Session expired. We generate a new one.
+                    pass
         return True, self.generate_id()
 
     def cookie(self, sid, path="/", domain="localhost"):
@@ -49,12 +52,12 @@ class SignedCookieManager(object):
 
         # Generate the expiration date using the delta
         expires = datetime.now() + timedelta(seconds=self.delta)
-        
+
         # Create the cookie containing the ssid.
         cookie = Cookie(
             name=self.cookie_name, value=ssid, path=path,
             domain=domain, expires=expires)
-    
+
         value = str(cookie)
 
         # Check value
