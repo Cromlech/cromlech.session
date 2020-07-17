@@ -8,7 +8,7 @@ import itsdangerous.exc
 from .prototypes import Session
 
 
-class SignedCookieManager(object):
+class SignedCookieManager:
 
     session = Session
 
@@ -67,7 +67,7 @@ class SignedCookieManager(object):
         return value
 
 
-class WSGISessionManager(object):
+class WSGISessionManager:
 
     def __init__(self, manager, environ_key='session'):
         self.environ_key = environ_key
@@ -79,7 +79,6 @@ class WSGISessionManager(object):
         def session_wrapper(environ, start_response):
 
             def session_start_response(status, headers, exc_info=None):
-
                 # Write down the session
                 # This relies on the good use of the `save` method.
                 session = environ[self.environ_key]

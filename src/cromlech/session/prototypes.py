@@ -1,9 +1,7 @@
-# -*- coding: utf-8 -*-
-
-from abc import ABCMeta, abstractmethod
+from abc import ABC, abstractmethod
 
 
-class Store(metaclass=ABCMeta):
+class Store(ABC):
     """Session store abstraction.
     """
     def new(self):
@@ -23,13 +21,13 @@ class Store(metaclass=ABCMeta):
         since it can be very costy.
         """
         raise NotImplementedError
-    
+
     @abstractmethod
     def __iter__(self):
         """Iterates the session ids if that makes sense in the context
         of the session management.
         """
-        return iter(())
+        raise NotImplementedError
 
     @abstractmethod
     def get(self, sid):
@@ -46,9 +44,9 @@ class Store(metaclass=ABCMeta):
     @abstractmethod
     def delete(self, sid):
         raise NotImplementedError
-    
 
-class Session(metaclass=ABCMeta):
+
+class Session(ABC):
     """ HTTP session dict prototype.
     This is an abstraction on top of a simple dict.
     It has flags to track modifications and access.
