@@ -1,3 +1,4 @@
+import typing as t
 from abc import ABC, abstractmethod
 
 
@@ -46,7 +47,7 @@ class Store(ABC):
         raise NotImplementedError
 
 
-class Session(ABC):
+class Session(t.Mapping[str, t.Any]):
     """ HTTP session dict prototype.
     This is an abstraction on top of a simple dict.
     It has flags to track modifications and access.
@@ -73,6 +74,9 @@ class Session(ABC):
 
     def __repr__(self):
         return self.data.__repr__()
+
+    def __len__(self):
+        return len(self.data)
 
     def __iter__(self):
         return iter(self.data)
@@ -119,3 +123,7 @@ class Session(ABC):
         elif self.accessed:
             # We are alive, please keep us that way.
             self.store.touch(self.sid)
+
+    def clear(self):
+        self.data.clear()
+        self._modified = True

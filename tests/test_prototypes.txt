@@ -26,7 +26,7 @@ The Store
 ---------
 
     >>> from cromlech.session import Store
-  
+
 The store prototype is a metaclass abstraction. It is meant to be
 subclassed as the inner workings can't be generic. They heavily depend
 on the backend:
@@ -50,7 +50,7 @@ let's create a basic store, using a dict as a backend:
     ...
     ...     def __init__(self):
     ...         self._store = {}
-    ... 
+    ...
     ...     def __iter__(self):
     ...         return iter(self._store.keys())
     ...
@@ -200,6 +200,19 @@ comes:
 
     >>> session.persist()
     >>> assert store.get('a sid') == {'other var': 42, 'my var': 12}
+
+A session can clear itself, but not destroy itself.
+
+    >>> session = Session('a sid', store)
+    >>> session.data['other var'] = 42
+    >>> session.save()
+    >>> session.persist()
+    >>> assert store.get('a sid') == {'other var': 42, 'my var': 12}
+    >>> session.clear()
+    >>> session.modified
+    True
+    >>> session.persist()
+    >>> assert store.get('a sid') == {}
 
 While a session cannot destroy itself, the store will gladly do it:
 
